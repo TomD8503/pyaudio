@@ -7,17 +7,6 @@ import matplotlib.pyplot as plt
 import time
 from tkinter import TclError
 
-# use this backend to display in separate Tk window
-def pcm24to32(data, channels=1):
-    if len(data) % 3 != 0:
-        raise ValueError('Size of data must be a multiple of 3 bytes')
-
-    out = np.zeros(len(data) // 3, dtype='<i4')
-    out.shape = -1, channels
-    temp = out.view('uint8').reshape(-1, 4)
-    columns = slice(None, -1)
-    temp[:, columns] = np.frombuffer(data, dtype='uint8').reshape(-1, 3)
-    return out
 
 def wav2array(nchannels, sampwidth, data):
     """data must be the string containing the bytes from the wav file."""
