@@ -8,14 +8,17 @@ import time
 from tkinter import TclError
 
 # use this backend to display in separate Tk window
+def pcm24to32(data, channels=1):
+    if len(data) % 3 != 0:
+        raise ValueError('Size of data must be a multiple of 3 bytes')
 
-def int24_to_int(self, input_data):
-    bytelen = len(input_data)
-    frames = bytelen/3
-    triads = struct.Struct('3s' * frames)
-    int4byte = struct.Struct('<i')
-    result = [int4byte.unpack('\0' + i)[0] >> 8 for i in triads.unpack(input_data)]
-    return result
+    out = np.zeros(len(data) // 3, dtype='<i4')
+    out.shape = -1, channels
+    temp = out.view('uint8').reshape(-1, 4)
+    columns = slice(None, -1)
+    temp[:, columns] = np.frombuffer(data, dtype='uint8').reshape(-1, 3)
+    return out
+
 
 # constants
 CHUNK = 4800             # samples per frame
@@ -66,9 +69,12 @@ while True:
     
     # binary data
     data = stream.read(CHUNK)  
-    #print(len(data))
-    data24 = int24_to_int(data)
-    data_np = np.array(data24)
+    
+    data32 = pcm24to32(data)
+    data32 = data32.reshape(1,-1)
+    data_np = np.array(data32)
+    #print(len(data_np))
+    data_np = data_np * np.hanning(len(data_np))
     #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
     # convert data to integers, make np array, then offset it by 127
     #data_int = struct.unpack(str(4 * CHUNK) + 'B', data)
