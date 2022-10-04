@@ -19,6 +19,27 @@ def pcm24to32(data, channels=1):
     temp[:, columns] = np.frombuffer(data, dtype='uint8').reshape(-1, 3)
     return out
 
+def wav2array(nchannels, sampwidth, data):
+    """data must be the string containing the bytes from the wav file."""
+    num_samples, remainder = divmod(len(data), sampwidth * nchannels)
+    if remainder > 0:
+        raise ValueError('The length of data is not a multiple of '
+                         'sampwidth * num_channels.')
+    if sampwidth > 4:
+        raise ValueError("sampwidth must not be greater than 4.")
+
+    if sampwidth == 3:
+        a = np.empty((num_samples, nchannels, 4), dtype=np.uint8)
+        raw_bytes = np.frombuffer(data, dtype=np.uint8)
+        a[:, :, :sampwidth] = raw_bytes.reshape(-1, nchannels, sampwidth)
+        a[:, :, sampwidth:] = (a[:, :, sampwidth - 1:sampwidth] >> 7) * 255
+        result = a.view('<i4').reshape(a.shape[:-1])
+    else:
+        # 8 bit samples are stored as unsigned ints; others as signed ints.
+        dt_char = 'u' if sampwidth == 1 else 'i'
+        a = np.fromstring(data, dtype='<%s%d' % (dt_char, sampwidth))
+        result = a.reshape(-1, nchannels)
+    return result
 
 # constants
 CHUNK = 4800             # samples per frame
@@ -69,12 +90,9 @@ while True:
     
     # binary data
     data = stream.read(CHUNK)  
-    
-    data32 = pcm24to32(data)
-    data32 = data32.reshape(1,-1)
-    data_np = np.array(data32)
-    #print(len(data_np))
-    data_np = data_np * np.hanning(len(data_np))
+    data = wav2array(1,3,data)
+    data = data.reshape(1,-1)
+    data = data * np.hanning(len(data))
     #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
     # convert data to integers, make np array, then offset it by 127
     #data_int = struct.unpack(str(4 * CHUNK) + 'B', data)
@@ -82,7 +100,7 @@ while True:
     # create np array and offset by 128
     
     
-    line.set_ydata(data_np)
+    line.set_ydata(data)
     
     # update figure canvas
     try:
