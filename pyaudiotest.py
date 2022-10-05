@@ -22,12 +22,12 @@ def wav2array(nchannels, sampwidth, data):
         raw_bytes = np.frombuffer(data, dtype=np.uint8)
         a[:, :, :sampwidth] = raw_bytes.reshape(-1, nchannels, sampwidth)
         a[:, :, sampwidth:] = (a[:, :, sampwidth - 1:sampwidth] >> 7) * 255
-        result = a.view('<i4').reshape(a.shape[:-1])
+        result = a.view('<i4').reshape(a.shape[-1:])
     else:
         # 8 bit samples are stored as unsigned ints; others as signed ints.
         dt_char = 'u' if sampwidth == 1 else 'i'
-        a = np.fromstring(data, dtype='<%s%d' % (dt_char, sampwidth))
-        result = a.reshape(-1, nchannels)
+        a = np.frombuffer(data, dtype='<%s%d' % (dt_char, sampwidth))
+        result = a.reshape(nchannels, -1)
     return result
 
 # constants
@@ -62,7 +62,7 @@ line, = ax.plot(x, np.random.rand(CHUNK), '-', lw=2)
 ax.set_title('AUDIO WAVEFORM')
 ax.set_xlabel('samples')
 ax.set_ylabel('volume')
-ax.set_ylim(-33000, 33000)
+ax.set_ylim(-100000, 100000)
 ax.set_xlim(0, CHUNK)
 plt.setp(ax, xticks=[0, CHUNK/2, CHUNK], yticks=[-33000, 0, 33000])
 
@@ -79,9 +79,11 @@ while True:
     
     # binary data
     data = stream.read(CHUNK)  
-    data = wav2array(1,3,data)
-    data = data.reshape(1,-1)
-    data = data * np.hanning(len(data))
+    data = wav2array(CHANNELS,3,data)
+    #data = data.reshape(-1,1)
+    size = len(data)
+    data_hann = data * np.hanning(size)
+    print(data.ndim)
     #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
     # convert data to integers, make np array, then offset it by 127
     #data_int = struct.unpack(str(4 * CHUNK) + 'B', data)
@@ -93,7 +95,7 @@ while True:
     
     # update figure canvas
     try:
-        fig.canvas.draw()
+        #fig.canvas.draw()
         fig.canvas.flush_events()
         frame_count += 1
         
