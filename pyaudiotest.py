@@ -22,7 +22,7 @@ def wav2array(nchannels, sampwidth, data):
         raw_bytes = np.frombuffer(data, dtype=np.uint8)
         a[:, :, :sampwidth] = raw_bytes.reshape(-1, nchannels, sampwidth)
         a[:, :, sampwidth:] = (a[:, :, sampwidth - 1:sampwidth] >> 7) * 255
-        result = a.view('<i4').reshape(a.shape[-1:])
+        result = a.view('<i4').reshape(a.shape[:-1])
     else:
         # 8 bit samples are stored as unsigned ints; others as signed ints.
         dt_char = 'u' if sampwidth == 1 else 'i'
@@ -80,10 +80,14 @@ while True:
     # binary data
     data = stream.read(CHUNK)  
     data = wav2array(CHANNELS,3,data)
-    #data = data.reshape(-1,1)
+    data = data.reshape(1,-1)
     size = len(data)
-    data_hann = data * np.hanning(size)
-    print(data.ndim)
+    window = np.hanning(size)
+    data_hann = data * window
+    print("window size:{}".format(window.shape))
+    print("data size:{}".format(data.shape))
+    print("data_hann size:{}".format(data_hann.shape))
+    
     #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
     # convert data to integers, make np array, then offset it by 127
     #data_int = struct.unpack(str(4 * CHUNK) + 'B', data)
@@ -91,7 +95,7 @@ while True:
     # create np array and offset by 128
     
     
-    line.set_ydata(data)
+    line.set_ydata(data_hann)
     
     # update figure canvas
     try:
