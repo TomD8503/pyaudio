@@ -84,9 +84,9 @@ while True:
     size = len(data)
     window = np.hanning(size)
     data_hann = data * window
-    print("window size:{}".format(window.shape))
-    print("data size:{}".format(data.shape))
-    print("data_hann size:{}".format(data_hann.shape))
+    #print("window size:{}".format(window.shape))
+    #print("data size:{}".format(data.shape))
+    #print("data_hann size:{}".format(data_hann.shape))
     
     #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
     # convert data to integers, make np array, then offset it by 127
@@ -99,7 +99,7 @@ while True:
     
     # update figure canvas
     try:
-        #fig.canvas.draw()
+        fig.canvas.draw()
         fig.canvas.flush_events()
         frame_count += 1
         
