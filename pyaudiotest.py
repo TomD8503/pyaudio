@@ -80,7 +80,7 @@ while True:
     # binary data
     data = stream.read(CHUNK)  
     data = wav2array(CHANNELS,3,data)
-    data = data.reshape(1,-1)
+    data = data[:,0]
     size = len(data)
     window = np.hanning(size)
     data_hann = data * window
