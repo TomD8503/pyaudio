@@ -30,6 +30,15 @@ def wav2array(nchannels, sampwidth, data):
         result = a.reshape(nchannels, -1)
     return result
 
+def GenerateFrequencyBands(NumberOfOctaves, BandsPerOctave, StartFreq):
+    multiplier = np.emath.power(2, 1/BandsPerOctave)
+    FreqArray = np.array([StartFreq])
+    for i in range(NumberOfOctaves*BandsPerOctave):
+        FreqArray = np.append(FreqArray, (FreqArray[i]*multiplier))
+    return FreqArray
+
+
+
 # constants
 CHUNK = 4800             # samples per frame
 FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
@@ -65,6 +74,14 @@ ax.set_ylabel('volume')
 ax.set_ylim(-100000, 100000)
 ax.set_xlim(0, CHUNK)
 plt.setp(ax, xticks=[0, CHUNK/2, CHUNK], yticks=[-33000, 0, 33000])
+
+#test freq banding
+NumberOfOctaves = 10
+BandsPerOctave = 6
+StartFreq = 20
+FreqArray = GenerateFrequencyBands(NumberOfOctaves, BandsPerOctave, StartFreq)
+print(FreqArray)
+
 
 # show the plot
 plt.show(block=False)
