@@ -3,9 +3,13 @@ import pyaudio
 import os
 import struct
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+import scipy
 import time
 from tkinter import TclError
+
+matplotlib.use('TkAgg')
 
 
 def wav2array(nchannels, sampwidth, data):
@@ -40,7 +44,7 @@ def GenerateFrequencyBands(NumberOfOctaves, BandsPerOctave, StartFreq):
 
 
 # constants
-CHUNK = 4800             # samples per frame
+CHUNK = 4096             # samples per frame
 FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
 CHANNELS = 1                 # single channel for microphone
 RATE = 48000                 # samples per second
@@ -62,18 +66,20 @@ stream = p.open(
 )
 
 # variable for plotting
-x = np.arange(0, CHUNK, 1)
+
+frequencies = int((CHUNK/2)+1)
+x = np.arange(0, frequencies, 1)
 
 # create a line object with random data
-line, = ax.plot(x, np.random.rand(CHUNK), '-', lw=2)
+line, = ax.plot(x, np.random.rand(frequencies), '-', lw=2)
 
 # basic formatting for the axes
-ax.set_title('AUDIO WAVEFORM')
-ax.set_xlabel('samples')
-ax.set_ylabel('volume')
-ax.set_ylim(-100000, 100000)
-ax.set_xlim(0, CHUNK)
-plt.setp(ax, xticks=[0, CHUNK/2, CHUNK], yticks=[-33000, 0, 33000])
+ax.set_title('frequency amplitude')
+ax.set_xlabel('frequency')
+ax.set_ylabel('amplitude')
+ax.set_ylim(0, 2**33)
+ax.set_xlim(0, frequencies)
+plt.setp(ax, xticks=[0, 400, frequencies], yticks=[0, 4000, 33000])
 
 #test freq banding
 NumberOfOctaves = 10
@@ -104,23 +110,22 @@ while True:
     #print("window size:{}".format(window.shape))
     #print("data size:{}".format(data.shape))
     #print("data_hann size:{}".format(data_hann.shape))
+    dft = np.abs(scipy.fft.rfft(data_hann))
     
-    #data_np = np.array(struct.unpack(str(CHUNK) + 'h', data))
-    # convert data to integers, make np array, then offset it by 127
-    #data_int = struct.unpack(str(4 * CHUNK) + 'B', data)
-    #print(len(data_int))
-    # create np array and offset by 128
+
     
     
-    line.set_ydata(data_hann)
+    line.set_ydata(dft)
     
     # update figure canvas
     try:
         fig.canvas.draw()
         fig.canvas.flush_events()
         frame_count += 1
+
         
-    except TclError:
+        
+    except (TclError):
         
         # calculate average frame rate
         frame_rate = frame_count / (time.time() - start_time)
