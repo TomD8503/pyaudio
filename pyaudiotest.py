@@ -1,3 +1,4 @@
+
 import pyaudio
 import sys
 import numpy as np
@@ -7,15 +8,12 @@ import pyqtgraph as pg
 import scipy
 import time
 
-              # samples per second
-#matplotlib.use('TkAgg')
-
 class MainWindow(QtWidgets.QMainWindow):
     
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         # constants
-        CHUNK = 16384             # samples per frame
+        CHUNK = 4096             # samples per frame
         FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
         CHANNELS = 1                 # single channel for microphone
         RATE = 48000   
@@ -30,25 +28,29 @@ class MainWindow(QtWidgets.QMainWindow):
         output=True,
         frames_per_buffer=CHUNK)
 
-        frequencies = int((CHUNK/2)+1)
-        x = np.arange(0, frequencies, 1)
-        y = np.random.rand(frequencies)
+        #frequencies = int((CHUNK/2)+1)
+        #print(frequencies)
+        #FrequencyBands = np.arange(0, frequencies, 1)
+        frequency = scipy.fft.rfftfreq(CHUNK,1/RATE)
+        magnitude = np.random.rand(CHUNK)
 
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
-        self.graphWidget.plot(x, y)
+        self.graphWidget.setLogMode(x=True, y=True)
+        #self.graphWidget.plot(frequency, magnitude)
 
-        while True:
+        for i in range(100):
             data = stream.read(CHUNK)  
             data = wav2array(CHANNELS,3,data)
             data = data[:,0]
             size = len(data)
+            #print(size)
             window = np.hanning(size)
             data_hann = data * window
-            #print("window size:{}".format(window.shape))
-            #print("data size:{}".format(data.shape))
-            #print("data_hann size:{}".format(data_hann.shape))
-            dft = np.abs(scipy.fft.rfft(data_hann))
+            magnitude = np.abs(scipy.fft.rfft(data_hann))
+            self.graphWidget.clear()
+            self.graphWidget.plot(frequency, magnitude)
+            
 
 
 def main():
