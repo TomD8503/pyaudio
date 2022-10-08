@@ -1,15 +1,61 @@
-from ctypes import sizeof
 import pyaudio
-import os
-import struct
+import sys
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
+from PyQt5 import QtWidgets
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
 import scipy
 import time
-from tkinter import TclError
 
-matplotlib.use('TkAgg')
+              # samples per second
+#matplotlib.use('TkAgg')
+
+class MainWindow(QtWidgets.QMainWindow):
+    
+    def __init__(self, *args, **kwargs):
+        super(MainWindow, self).__init__(*args, **kwargs)
+        # constants
+        CHUNK = 16384             # samples per frame
+        FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
+        CHANNELS = 1                 # single channel for microphone
+        RATE = 48000   
+        # pyaudio class instance
+        p = pyaudio.PyAudio()
+        # stream object to get data from microphone
+        stream = p.open(
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        input=True,
+        output=True,
+        frames_per_buffer=CHUNK)
+
+        frequencies = int((CHUNK/2)+1)
+        x = np.arange(0, frequencies, 1)
+        y = np.random.rand(frequencies)
+
+        self.graphWidget = pg.PlotWidget()
+        self.setCentralWidget(self.graphWidget)
+        self.graphWidget.plot(x, y)
+
+        while True:
+            data = stream.read(CHUNK)  
+            data = wav2array(CHANNELS,3,data)
+            data = data[:,0]
+            size = len(data)
+            window = np.hanning(size)
+            data_hann = data * window
+            #print("window size:{}".format(window.shape))
+            #print("data size:{}".format(data.shape))
+            #print("data_hann size:{}".format(data_hann.shape))
+            dft = np.abs(scipy.fft.rfft(data_hann))
+
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    main = MainWindow()
+    main.show()
+    sys.exit(app.exec_())
 
 
 def wav2array(nchannels, sampwidth, data):
@@ -42,44 +88,8 @@ def GenerateFrequencyBands(NumberOfOctaves, BandsPerOctave, StartFreq):
     return FreqArray
 
 
-
-# constants
-CHUNK = 4096             # samples per frame
-FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
-CHANNELS = 1                 # single channel for microphone
-RATE = 48000                 # samples per second
-
-# create matplotlib figure and axes
-fig, ax = plt.subplots(1, figsize=(15, 7))
-
-# pyaudio class instance
-p = pyaudio.PyAudio()
-
-# stream object to get data from microphone
-stream = p.open(
-    format=FORMAT,
-    channels=CHANNELS,
-    rate=RATE,
-    input=True,
-    output=True,
-    frames_per_buffer=CHUNK
-)
-
-# variable for plotting
-
-frequencies = int((CHUNK/2)+1)
-x = np.arange(0, frequencies, 1)
-
-# create a line object with random data
-line, = ax.plot(x, np.random.rand(frequencies), '-', lw=2)
-
-# basic formatting for the axes
-ax.set_title('frequency amplitude')
-ax.set_xlabel('frequency')
-ax.set_ylabel('amplitude')
-ax.set_ylim(0, 2**33)
-ax.set_xlim(0, frequencies)
-plt.setp(ax, xticks=[0, 400, frequencies], yticks=[0, 4000, 33000])
+if __name__ == '__main__':
+    main()
 
 #test freq banding
 NumberOfOctaves = 10
@@ -87,50 +97,3 @@ BandsPerOctave = 6
 StartFreq = 20
 FreqArray = GenerateFrequencyBands(NumberOfOctaves, BandsPerOctave, StartFreq)
 print(FreqArray)
-
-
-# show the plot
-plt.show(block=False)
-
-print('stream started')
-
-# for measuring frame rate
-frame_count = 0
-start_time = time.time()
-
-while True:
-    
-    # binary data
-    data = stream.read(CHUNK)  
-    data = wav2array(CHANNELS,3,data)
-    data = data[:,0]
-    size = len(data)
-    window = np.hanning(size)
-    data_hann = data * window
-    #print("window size:{}".format(window.shape))
-    #print("data size:{}".format(data.shape))
-    #print("data_hann size:{}".format(data_hann.shape))
-    dft = np.abs(scipy.fft.rfft(data_hann))
-    
-
-    
-    
-    line.set_ydata(dft)
-    
-    # update figure canvas
-    try:
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-        frame_count += 1
-
-        
-        
-    except (TclError):
-        
-        # calculate average frame rate
-        frame_rate = frame_count / (time.time() - start_time)
-        
-        print('stream stopped')
-        print('average frame rate = {:.0f} FPS'.format(frame_rate))
-        break
-
