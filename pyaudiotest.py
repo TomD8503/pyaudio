@@ -2,54 +2,76 @@
 import pyaudio
 import sys
 import numpy as np
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
 import scipy
-import time
+
 
 class MainWindow(QtWidgets.QMainWindow):
     
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         # constants
-        CHUNK = 4096             # samples per frame
+        self.CHUNK = 4096*2             # samples per frame
         FORMAT = pyaudio.paInt24     # audio format (bytes per sample?)
-        CHANNELS = 1                 # single channel for microphone
+        self.CHANNELS = 1                 # single channel for microphone
         RATE = 48000   
         # pyaudio class instance
         p = pyaudio.PyAudio()
         # stream object to get data from microphone
-        stream = p.open(
+        self.stream = p.open(
         format=FORMAT,
-        channels=CHANNELS,
+        channels=self.CHANNELS,
         rate=RATE,
         input=True,
         output=True,
-        frames_per_buffer=CHUNK)
+        frames_per_buffer=self.CHUNK)
 
         #frequencies = int((CHUNK/2)+1)
         #print(frequencies)
         #FrequencyBands = np.arange(0, frequencies, 1)
-        frequency = scipy.fft.rfftfreq(CHUNK,1/RATE)
-        magnitude = np.random.rand(CHUNK)
+        self.frequency = scipy.fft.rfftfreq(self.CHUNK,1/RATE)
+        magnitude = np.random.rand(self.CHUNK)
 
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.graphWidget.setLogMode(x=True, y=True)
+        self.pen = pg.mkPen(color=(255, 0, 0), width=2, style=QtCore.Qt.SolidLine)
+        self.graphWidget.setYRange(0, 10)
+        self.graphWidget.showGrid(x=True, y=True)
         #self.graphWidget.plot(frequency, magnitude)
+    
+        
+        data = self.stream.read(self.CHUNK)  
+        data = wav2array(self.CHANNELS,3,data)
+        data = data[:,0]
+        size = len(data)
+        #print(size)
+        window = np.hanning(size)
+        data_hann = data * window
+        magnitude = np.abs(scipy.fft.rfft(data_hann))
+        self.graphWidget.clear()
+        self.MyPlot = self.graphWidget.plot(self.frequency, magnitude, pen=self.pen)
 
-        for i in range(100):
-            data = stream.read(CHUNK)  
-            data = wav2array(CHANNELS,3,data)
-            data = data[:,0]
-            size = len(data)
-            #print(size)
-            window = np.hanning(size)
-            data_hann = data * window
-            magnitude = np.abs(scipy.fft.rfft(data_hann))
-            self.graphWidget.clear()
-            self.graphWidget.plot(frequency, magnitude)
+         # ... init continued ...
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(50)
+        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.start()
+
+    def update_plot_data(self):
+        data = self.stream.read(self.CHUNK)  
+        data = wav2array(self.CHANNELS,3,data)
+        data = data[:,0]
+        size = len(data)
+        #print(size)
+        window = np.hanning(size)
+        data_hann = data * window
+        magnitude = np.abs(scipy.fft.rfft(data_hann))
+        #self.graphWidget.clear()
+        #self.graphWidget.plot(self.frequency, magnitude, pen=self.pen)
+        self.MyPlot.setData(self.frequency, magnitude)  # Update the data.
             
 
 
